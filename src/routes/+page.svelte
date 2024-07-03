@@ -1,22 +1,21 @@
 <script>
-	import { writable, derived } from 'svelte/store';
 	import CurrencyInput from '$lib/CurrencyInput.svelte';
 
-	// Categories for income and expenses
-	let incomeCategories = writable([]);
-	let expenseCategories = writable([]);
+	// Income and Expense Categories
+	let incomeCategories = $state([]);
+	let expenseCategories = $state([]);
 
-	let newIncomeCategory = '';
-	let newIncomeAmount = '';
-	let newExpenseCategory = '';
-	let newExpenseAmount = '';
+	let newIncomeCategory = $state('');
+	let newIncomeAmount = $state('');
+	let newExpenseCategory = $state('');
+	let newExpenseAmount = $state('');
 
 	const addIncomeCategory = () => {
 		if (newIncomeCategory.trim()) {
-			incomeCategories.update((categories) => [
-				...categories,
+			incomeCategories = [
+				...incomeCategories,
 				{ name: newIncomeCategory, budgetedAmount: parseFloat(newIncomeAmount) || 0 }
-			]);
+			];
 			newIncomeCategory = '';
 			newIncomeAmount = '';
 		}
@@ -24,40 +23,39 @@
 
 	const addExpenseCategory = () => {
 		if (newExpenseCategory.trim()) {
-			expenseCategories.update((categories) => [
-				...categories,
+			expenseCategories = [
+				...expenseCategories,
 				{ name: newExpenseCategory, budgetedAmount: parseFloat(newExpenseAmount) || 0 }
-			]);
+			];
 			newExpenseCategory = '';
 			newExpenseAmount = '';
 		}
 	};
 
 	const updateCategoryAmount = (category, type, amount) => {
-		const updateFn = type === 'income' ? incomeCategories : expenseCategories;
-		updateFn.update((categories) =>
-			categories.map((cat) =>
+		if (type === 'income') {
+			incomeCategories = incomeCategories.map((cat) =>
 				cat === category ? { ...cat, budgetedAmount: parseFloat(amount) || 0 } : cat
-			)
-		);
+			);
+		} else {
+			expenseCategories = expenseCategories.map((cat) =>
+				cat === category ? { ...cat, budgetedAmount: parseFloat(amount) || 0 } : cat
+			);
+		}
 	};
 
 	const clearCategories = () => {
-		incomeCategories.set([]);
-		expenseCategories.set([]);
+		incomeCategories = [];
+		expenseCategories = [];
 	};
 
-	const totalIncome = derived(incomeCategories, ($incomeCategories) =>
-		$incomeCategories.reduce((sum, cat) => sum + cat.budgetedAmount, 0).toFixed(2)
+	const totalIncome = $derived(
+		incomeCategories.reduce((sum, cat) => sum + cat.budgetedAmount, 0).toFixed(2)
 	);
-
-	const totalExpenses = derived(expenseCategories, ($expenseCategories) =>
-		$expenseCategories.reduce((sum, cat) => sum + cat.budgetedAmount, 0).toFixed(2)
+	const totalExpenses = $derived(
+		expenseCategories.reduce((sum, cat) => sum + cat.budgetedAmount, 0).toFixed(2)
 	);
-
-	const netIncome = derived([totalIncome, totalExpenses], ([$totalIncome, $totalExpenses]) =>
-		($totalIncome - $totalExpenses).toFixed(2)
-	);
+	const netIncome = $derived((parseFloat(totalIncome) - parseFloat(totalExpenses)).toFixed(2));
 </script>
 
 <main class="budget-container">
@@ -73,7 +71,7 @@
 		<div class="column">
 			<h2>Income Categories</h2>
 			<div>
-				{#each $incomeCategories as category}
+				{#each incomeCategories as category}
 					<div class="category-item">
 						<span>{category.name}</span>
 						<CurrencyInput
@@ -97,7 +95,7 @@
 		<div class="column">
 			<h2>Expense Categories</h2>
 			<div>
-				{#each $expenseCategories as category}
+				{#each expenseCategories as category}
 					<div class="category-item">
 						<span>{category.name}</span>
 						<CurrencyInput
@@ -121,27 +119,25 @@
 
 	<section class="bottom-line">
 		<div class="section">
-			<p>${$totalIncome}</p>
+			<p>${totalIncome}</p>
 			<p class="label">revenue</p>
 		</div>
 		<div class="section">
-			<p>${$totalExpenses}</p>
+			<p>${totalExpenses}</p>
 			<p class="label">expenses</p>
 		</div>
 		<div
 			class="section net-income"
-			class:positive={$netIncome >= 0}
-			class:negative={$netIncome < 0}
+			class:positive={parseFloat(netIncome) >= 0}
+			class:negative={parseFloat(netIncome) < 0}
 		>
-			<p>${$netIncome}</p>
+			<p>${netIncome}</p>
 			<p class="label">net income</p>
 		</div>
 	</section>
 </main>
 
 <style>
-	@import 'https://unpkg.com/@picocss/pico@1.*/css/pico.min.css';
-
 	.budget-container {
 		max-width: 1200px;
 		margin: auto;

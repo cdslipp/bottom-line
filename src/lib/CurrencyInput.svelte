@@ -1,5 +1,5 @@
 <script>
-	export let value = 0;
+	let { value = $bindable('') } = $props();
 
 	const formatValue = (val) => {
 		let numericValue = String(val).replace(/\D/g, '');
@@ -10,7 +10,9 @@
 		return numericValue;
 	};
 
-	$: value = formatValue(value);
+	$effect(() => {
+		value = formatValue(value);
+	});
 
 	const handleInput = (e) => {
 		value = e.target.value;
