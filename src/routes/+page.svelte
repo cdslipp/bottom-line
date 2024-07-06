@@ -1,5 +1,6 @@
 <script>
 	import CurrencyInput from '$lib/CurrencyInput.svelte';
+	import Drawer from '$lib/Drawer.svelte';
 
 	// Income and Expense Categories
 	let incomeCategories = $state([]);
@@ -10,11 +11,18 @@
 	let newExpenseCategory = $state('');
 	let newExpenseAmount = $state('');
 
+	let selectedCategory = $state(null);
+	let drawerOpen = $state(false);
+
 	const addIncomeCategory = () => {
 		if (newIncomeCategory.trim()) {
 			incomeCategories = [
 				...incomeCategories,
-				{ name: newIncomeCategory, budgetedAmount: parseFloat(newIncomeAmount) || 0 }
+				{
+					name: newIncomeCategory,
+					budgetedAmount: parseFloat(newIncomeAmount) || 0,
+					transactions: []
+				}
 			];
 			newIncomeCategory = '';
 			newIncomeAmount = '';
@@ -25,7 +33,11 @@
 		if (newExpenseCategory.trim()) {
 			expenseCategories = [
 				...expenseCategories,
-				{ name: newExpenseCategory, budgetedAmount: parseFloat(newExpenseAmount) || 0 }
+				{
+					name: newExpenseCategory,
+					budgetedAmount: parseFloat(newExpenseAmount) || 0,
+					transactions: []
+				}
 			];
 			newExpenseCategory = '';
 			newExpenseAmount = '';
@@ -56,85 +68,109 @@
 		expenseCategories.reduce((sum, cat) => sum + cat.budgetedAmount, 0).toFixed(2)
 	);
 	const netIncome = $derived((parseFloat(totalIncome) - parseFloat(totalExpenses)).toFixed(2));
+
+	const openCategoryDrawer = (category) => {
+		selectedCategory = category;
+		drawerOpen = true;
+	};
+
+	const addTransaction = () => {
+		if (selectedCategory) {
+			const newTransaction = {
+				date: new Date().toISOString().split('T')[0],
+				description: 'New transaction',
+				subtotal: '0.00',
+				salesTax: '0.00',
+				total: '0.00',
+				theoretical: true
+			};
+			selectedCategory.transactions = [...selectedCategory.transactions, newTransaction];
+		}
+	};
 </script>
 
 <main class="budget-container">
+	<Drawer {selectedCategory} {addTransaction} isOpen={drawerOpen} />
 	<header class="budget-header">
 		<h1>Bottom Line</h1>
 	</header>
 
-	<section>
-		<button on:click={clearCategories} class="secondary">Clear Categories</button>
-	</section>
+	<div id="page-content">
+		<section>
+			<button on:click={clearCategories} class="secondary">Clear Categories</button>
+		</section>
 
-	<div class="container">
-		<div class="column">
-			<h2>Income Categories</h2>
-			<div>
-				{#each incomeCategories as category}
-					<div class="category-item">
-						<span>{category.name}</span>
-						<CurrencyInput
-							bind:value={category.budgetedAmount}
-							on:input={(e) => updateCategoryAmount(category, 'income', e.target.value)}
-						/>
+		<div class="container">
+			<!-- Income Categories -->
+			<div class="column">
+				<h2>Income Categories</h2>
+				<div class="categories">
+					{#each incomeCategories as category}
+						<div class="category-item" on:click={() => openCategoryDrawer(category)}>
+							<span>{category.name}</span>
+							<CurrencyInput
+								bind:value={category.budgetedAmount}
+								on:input={(e) => updateCategoryAmount(category, 'income', e.target.value)}
+							/>
+						</div>
+					{/each}
+					<div class="add-category">
+						<form on:submit|preventDefault={addIncomeCategory}>
+							<fieldset role="group">
+								<input type="text" bind:value={newIncomeCategory} placeholder="Category Name" />
+								<CurrencyInput bind:value={newIncomeAmount} />
+								<button type="submit">Add</button>
+							</fieldset>
+						</form>
 					</div>
-				{/each}
-				<div class="add-category">
-					<form on:submit|preventDefault={addIncomeCategory}>
-						<fieldset role="group">
-							<input type="text" bind:value={newIncomeCategory} placeholder="Category Name" />
-							<CurrencyInput bind:value={newIncomeAmount} />
-							<button type="submit">Add</button>
-						</fieldset>
-					</form>
+				</div>
+			</div>
+
+			<!-- Expense Categories -->
+			<div class="column">
+				<h2>Expense Categories</h2>
+				<div class="categories">
+					{#each expenseCategories as category}
+						<div class="category-item" on:click={() => openCategoryDrawer(category)}>
+							<span>{category.name}</span>
+							<CurrencyInput
+								bind:value={category.budgetedAmount}
+								on:input={(e) => updateCategoryAmount(category, 'expense', e.target.value)}
+							/>
+						</div>
+					{/each}
+					<div class="add-category">
+						<form on:submit|preventDefault={addExpenseCategory}>
+							<fieldset role="group">
+								<input type="text" bind:value={newExpenseCategory} placeholder="Category Name" />
+								<CurrencyInput bind:value={newExpenseAmount} />
+								<button type="submit">Add</button>
+							</fieldset>
+						</form>
+					</div>
 				</div>
 			</div>
 		</div>
 
-		<div class="column">
-			<h2>Expense Categories</h2>
-			<div>
-				{#each expenseCategories as category}
-					<div class="category-item">
-						<span>{category.name}</span>
-						<CurrencyInput
-							bind:value={category.budgetedAmount}
-							on:input={(e) => updateCategoryAmount(category, 'expense', e.target.value)}
-						/>
-					</div>
-				{/each}
-				<div class="add-category">
-					<form on:submit|preventDefault={addExpenseCategory}>
-						<fieldset role="group">
-							<input type="text" bind:value={newExpenseCategory} placeholder="Category Name" />
-							<CurrencyInput bind:value={newExpenseAmount} />
-							<button type="submit">Add</button>
-						</fieldset>
-					</form>
-				</div>
+		<section class="bottom-line">
+			<div class="section">
+				<p>${totalIncome}</p>
+				<p class="label">revenue</p>
 			</div>
-		</div>
+			<div class="section">
+				<p>${totalExpenses}</p>
+				<p class="label">expenses</p>
+			</div>
+			<div
+				class="section net-income"
+				class:positive={parseFloat(netIncome) >= 0}
+				class:negative={parseFloat(netIncome) < 0}
+			>
+				<p>${netIncome}</p>
+				<p class="label">net income</p>
+			</div>
+		</section>
 	</div>
-
-	<section class="bottom-line">
-		<div class="section">
-			<p>${totalIncome}</p>
-			<p class="label">revenue</p>
-		</div>
-		<div class="section">
-			<p>${totalExpenses}</p>
-			<p class="label">expenses</p>
-		</div>
-		<div
-			class="section net-income"
-			class:positive={parseFloat(netIncome) >= 0}
-			class:negative={parseFloat(netIncome) < 0}
-		>
-			<p>${netIncome}</p>
-			<p class="label">net income</p>
-		</div>
-	</section>
 </main>
 
 <style>
@@ -160,6 +196,14 @@
 		padding: 1rem;
 		border: 1px solid #ccc;
 		border-radius: 8px;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.categories {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
 	}
 
 	.category-item {
@@ -167,6 +211,7 @@
 		justify-content: space-between;
 		padding: 0.5rem 0;
 		align-items: center;
+		cursor: pointer;
 	}
 
 	.add-category fieldset {
@@ -174,11 +219,6 @@
 		flex-direction: row;
 		align-items: center;
 		gap: 0.5rem;
-	}
-
-	.category-item input {
-		width: 100px;
-		text-align: right;
 	}
 
 	.bottom-line {

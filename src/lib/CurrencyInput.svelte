@@ -1,37 +1,23 @@
 <script>
-	let { value = $bindable('') } = $props();
+	export let value = 0;
 
 	const formatValue = (val) => {
+		console.log('Raw input value:', val);
 		let numericValue = String(val).replace(/\D/g, '');
-		if (numericValue === '') {
-			return '';
-		}
-		numericValue = (parseFloat(numericValue) / 100).toFixed(2);
+		console.log('Formatted numeric value:', numericValue);
+		if (numericValue === '') return '0';
+		numericValue = parseInt(numericValue, 10);
+		console.log('Parsed integer value:', numericValue);
 		return numericValue;
 	};
 
-	$effect(() => {
-		value = formatValue(value);
-	});
+	$: value = formatValue(value);
 
 	const handleInput = (e) => {
-		value = e.target.value;
+		console.log('Handling input...', e.target.value);
+		value = formatValue(e.target.value);
+		console.log('Updated value:', value);
 	};
 </script>
 
-<input type="text" bind:value on:input={handleInput} placeholder="0.00" />
-
-<style>
-	input[type='text'] {
-		-moz-appearance: textfield;
-	}
-	input::-webkit-outer-spin-button,
-	input::-webkit-inner-spin-button {
-		-webkit-appearance: none;
-		margin: 0;
-	}
-	input {
-		width: 100px;
-		text-align: right;
-	}
-</style>
+<input type="text" class="moneyInput" bind:value on:input={handleInput} placeholder="0" />
