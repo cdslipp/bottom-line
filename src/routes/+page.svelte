@@ -19,6 +19,7 @@
 			incomeCategories = [
 				...incomeCategories,
 				{
+					id: Date.now(),
 					name: newIncomeCategory,
 					budgetedAmount: parseFloat(newIncomeAmount) || 0,
 					transactions: []
@@ -34,6 +35,7 @@
 			expenseCategories = [
 				...expenseCategories,
 				{
+					id: Date.now(),
 					name: newExpenseCategory,
 					budgetedAmount: parseFloat(newExpenseAmount) || 0,
 					transactions: []
@@ -47,11 +49,11 @@
 	const updateCategoryAmount = (category, type, amount) => {
 		if (type === 'income') {
 			incomeCategories = incomeCategories.map((cat) =>
-				cat === category ? { ...cat, budgetedAmount: parseFloat(amount) || 0 } : cat
+				cat.id === category.id ? { ...cat, budgetedAmount: parseFloat(amount) || 0 } : cat
 			);
 		} else {
 			expenseCategories = expenseCategories.map((cat) =>
-				cat === category ? { ...cat, budgetedAmount: parseFloat(amount) || 0 } : cat
+				cat.id === category.id ? { ...cat, budgetedAmount: parseFloat(amount) || 0 } : cat
 			);
 		}
 	};
@@ -74,23 +76,43 @@
 		drawerOpen = true;
 	};
 
-	const addTransaction = () => {
-		if (selectedCategory) {
-			const newTransaction = {
-				date: new Date().toISOString().split('T')[0],
-				description: 'New transaction',
-				subtotal: '0.00',
-				salesTax: '0.00',
-				total: '0.00',
-				theoretical: true
-			};
-			selectedCategory.transactions = [...selectedCategory.transactions, newTransaction];
+	const handleAddTransaction = (event) => {
+		const { categoryId, transaction } = event.detail;
+		const categoryType = incomeCategories.find((cat) => cat.id === categoryId)
+			? 'income'
+			: 'expense';
+		const categories = categoryType === 'income' ? incomeCategories : expenseCategories;
+
+		const updatedCategories = categories.map((cat) => {
+			if (cat.id === categoryId) {
+				return {
+					...cat,
+					transactions: [...cat.transactions, transaction]
+				};
+			}
+			return cat;
+		});
+
+		if (categoryType === 'income') {
+			incomeCategories = updatedCategories;
+		} else {
+			expenseCategories = updatedCategories;
 		}
+	};
+
+	const handleCloseDrawer = () => {
+		drawerOpen = false;
+		selectedCategory = null;
 	};
 </script>
 
 <main class="budget-container">
-	<Drawer {selectedCategory} {addTransaction} isOpen={drawerOpen} />
+	<Drawer
+		{selectedCategory}
+		isOpen={drawerOpen}
+		on:addTransaction={handleAddTransaction}
+		on:close={handleCloseDrawer}
+	/>
 	<header class="budget-header">
 		<h1>Bottom Line</h1>
 	</header>
@@ -105,7 +127,7 @@
 			<div class="column">
 				<h2>Income Categories</h2>
 				<div class="categories">
-					{#each incomeCategories as category}
+					{#each incomeCategories as category (category.id)}
 						<div class="category-item" on:click={() => openCategoryDrawer(category)}>
 							<span>{category.name}</span>
 							<CurrencyInput
@@ -130,7 +152,7 @@
 			<div class="column">
 				<h2>Expense Categories</h2>
 				<div class="categories">
-					{#each expenseCategories as category}
+					{#each expenseCategories as category (category.id)}
 						<div class="category-item" on:click={() => openCategoryDrawer(category)}>
 							<span>{category.name}</span>
 							<CurrencyInput
@@ -174,6 +196,7 @@
 </main>
 
 <style>
+	/* Styles remain the same */
 	.budget-container {
 		max-width: 1200px;
 		margin: auto;
