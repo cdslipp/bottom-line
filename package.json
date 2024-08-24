@@ -35,6 +35,7 @@
 	"type": "module",
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.27.0",
+		"@instantdb/core": "^0.12.8",
 		"@picocss/pico": "^2.0.6",
 		"dexie": "^4.0.8",
 		"openai": "^4.56.0"

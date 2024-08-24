@@ -1,7 +1,10 @@
 <script>
+	import { getContext } from 'svelte';
+	import { tx, id } from '@instantdb/core';
+	const db = getContext('db');
+
 	let selectedFile = null;
-	let analysisResult = $state('');
-	let jsonResult = $state('');
+	let receipts = $state([]);
 	let isLoading = $state(false);
 
 	const handleFileChange = (event) => {
@@ -30,7 +33,7 @@
 				});
 
 				const result = await response.json();
-				analysisResult = result.analysisResult;
+				let analysisResult = result.analysisResult;
 
 				if (analysisResult.includes('Invalid. This is not a receipt.')) {
 					isLoading = false;
@@ -39,8 +42,20 @@
 
 				// Now call the second API to convert the result to JSON
 				console.log('About to call JSON api');
-				await convertToJSON(analysisResult);
+				const jsonResult = await convertToJSON(analysisResult);
 				isLoading = false;
+
+				db.transact(tx.transactions[id()].update(jsonResult));
+				// Append to the receipts list
+				receipts = [
+					...receipts,
+					{
+						vendor: jsonResult.storeInfo.name,
+						total: jsonResult.totals.total,
+						details: jsonResult,
+						showDetails: false
+					}
+				];
 			};
 			reader.readAsDataURL(selectedFile);
 		} catch (error) {
@@ -61,11 +76,15 @@
 			});
 
 			const result = await response.json();
-			jsonResult = result.jsonResult;
-			console.log('JSON Result:', jsonResult);
+			return JSON.parse(result.jsonResult); // Parse the JSON result before returning
 		} catch (error) {
 			console.error('Error converting to JSON:', error);
+			throw new Error('Failed to convert receipt text to JSON');
 		}
+	};
+
+	const toggleDetails = (index) => {
+		receipts[index].showDetails = !receipts[index].showDetails;
 	};
 </script>
 
@@ -80,20 +99,25 @@
 		{/if}
 	</button>
 
-	<!-- {#if analysisResult}
-		<h2>Analysis Result:</h2>
-		<pre>{analysisResult}</pre>
-	{/if} -->
-
-	{#if jsonResult}
-		<h2>JSON Result:</h2>
-		<pre>{jsonResult}</pre>
-	{/if}
+	<h2>Uploaded Receipts</h2>
+	<ul>
+		{#each receipts as receipt, index}
+			<li>
+				<div class="receipt-summary" on:click={() => toggleDetails(index)}>
+					<span>{receipt.vendor}</span> - <span>${receipt.total}</span>
+				</div>
+				{#if receipt.showDetails}
+					<pre>{JSON.stringify(receipt.details, null, 2)}</pre>
+				{/if}
+			</li>
+		{/each}
+	</ul>
 </div>
 
 <style>
 	.analyzer-container {
 		max-width: 600px;
+		margin: auto;
 		text-align: center;
 	}
 	.analyzer-container input[type='file'] {
@@ -101,6 +125,21 @@
 	}
 	.analyzer-container button {
 		margin: 10px;
+	}
+	.analyzer-container h2 {
+		margin-top: 30px;
+		text-align: left;
+	}
+	.analyzer-container ul {
+		list-style-type: none;
+		padding: 0;
+	}
+	.analyzer-container li {
+		margin: 10px 0;
+	}
+	.receipt-summary {
+		cursor: pointer;
+		user-select: none;
 	}
 	.analyzer-container pre {
 		background: #f4f4f4;

@@ -1,6 +1,18 @@
 <script>
 	import '@picocss/pico';
 	import '../app.css';
+
+	import { setContext } from 'svelte';
+	import { init } from '@instantdb/core';
+
+	// ID for app: bottom line
+	const APP_ID = '7d8d7c86-857f-4a32-bf4b-c713660c54af';
+
+	// Initialize the database
+	const db = init({ appId: APP_ID });
+
+	// ...and add it to the context for child components to access
+	setContext('db', db);
 </script>
 
 <slot />
