@@ -1,7 +1,7 @@
 <script>
 	let selectedFile = null;
 	let analysisResult = $state('');
-	let jsonResult = '';
+	let jsonResult = $state('');
 	let isLoading = $state(false);
 
 	const handleFileChange = (event) => {
@@ -62,6 +62,7 @@
 
 			const result = await response.json();
 			jsonResult = result.jsonResult;
+			console.log('JSON Result:', jsonResult);
 		} catch (error) {
 			console.error('Error converting to JSON:', error);
 		}
@@ -79,10 +80,10 @@
 		{/if}
 	</button>
 
-	{#if analysisResult}
+	<!-- {#if analysisResult}
 		<h2>Analysis Result:</h2>
 		<pre>{analysisResult}</pre>
-	{/if}
+	{/if} -->
 
 	{#if jsonResult}
 		<h2>JSON Result:</h2>
@@ -93,7 +94,6 @@
 <style>
 	.analyzer-container {
 		max-width: 600px;
-		margin: auto;
 		text-align: center;
 	}
 	.analyzer-container input[type='file'] {
