@@ -1,6 +1,7 @@
 <script>
 	import CurrencyInput from '$lib/CurrencyInput.svelte';
 	import Drawer from '$lib/Drawer.svelte';
+	import BottomLine from '$lib/BottomLine.svelte';
 
 	// Income and Expense Categories
 	let incomeCategories = $state([]);
@@ -14,7 +15,8 @@
 	let selectedCategory = $state(null);
 	let drawerOpen = $state(false);
 
-	const addIncomeCategory = () => {
+	const addIncomeCategory = (event) => {
+		event.preventDefault(); // Prevent default form submit
 		if (newIncomeCategory.trim()) {
 			incomeCategories = [
 				...incomeCategories,
@@ -25,12 +27,14 @@
 					transactions: []
 				}
 			];
+			console.log('Income category added:', newIncomeCategory);
 			newIncomeCategory = '';
 			newIncomeAmount = '';
 		}
 	};
 
-	const addExpenseCategory = () => {
+	const addExpenseCategory = (event) => {
+		event.preventDefault(); // Prevent default form submit
 		if (newExpenseCategory.trim()) {
 			expenseCategories = [
 				...expenseCategories,
@@ -41,6 +45,7 @@
 					transactions: []
 				}
 			];
+			console.log('Expense category added:', newExpenseCategory);
 			newExpenseCategory = '';
 			newExpenseAmount = '';
 		}
@@ -119,7 +124,7 @@
 
 	<div id="page-content">
 		<section>
-			<button on:click={clearCategories} class="secondary">Clear Categories</button>
+			<button onclick={clearCategories} class="secondary">Clear Categories</button>
 		</section>
 
 		<div class="container">
@@ -128,7 +133,7 @@
 				<h2>Income Categories</h2>
 				<div class="categories">
 					{#each incomeCategories as category (category.id)}
-						<div class="category-item" on:click={() => openCategoryDrawer(category)}>
+						<div class="category-item" onclick={() => openCategoryDrawer(category)}>
 							<span>{category.name}</span>
 							<CurrencyInput
 								bind:value={category.budgetedAmount}
@@ -137,11 +142,12 @@
 						</div>
 					{/each}
 					<div class="add-category">
-						<form on:submit|preventDefault={addIncomeCategory}>
+						<form onsubmit={addIncomeCategory}>
 							<fieldset role="group">
 								<input type="text" bind:value={newIncomeCategory} placeholder="Category Name" />
 								<CurrencyInput bind:value={newIncomeAmount} />
-								<button type="submit">Add</button>
+								<!-- Hidden Add Button -->
+								<button type="submit" class="hidden-button">Add</button>
 							</fieldset>
 						</form>
 					</div>
@@ -153,7 +159,7 @@
 				<h2>Expense Categories</h2>
 				<div class="categories">
 					{#each expenseCategories as category (category.id)}
-						<div class="category-item" on:click={() => openCategoryDrawer(category)}>
+						<div class="category-item" onclick={() => openCategoryDrawer(category)}>
 							<span>{category.name}</span>
 							<CurrencyInput
 								bind:value={category.budgetedAmount}
@@ -162,11 +168,12 @@
 						</div>
 					{/each}
 					<div class="add-category">
-						<form on:submit|preventDefault={addExpenseCategory}>
+						<form onsubmit={addExpenseCategory}>
 							<fieldset role="group">
 								<input type="text" bind:value={newExpenseCategory} placeholder="Category Name" />
 								<CurrencyInput bind:value={newExpenseAmount} />
-								<button type="submit">Add</button>
+								<!-- Hidden Add Button -->
+								<button type="submit" class="hidden-button">Add</button>
 							</fieldset>
 						</form>
 					</div>
@@ -174,24 +181,7 @@
 			</div>
 		</div>
 
-		<section class="bottom-line">
-			<div class="section">
-				<p>${totalIncome}</p>
-				<p class="label">revenue</p>
-			</div>
-			<div class="section">
-				<p>${totalExpenses}</p>
-				<p class="label">expenses</p>
-			</div>
-			<div
-				class="section net-income"
-				class:positive={parseFloat(netIncome) >= 0}
-				class:negative={parseFloat(netIncome) < 0}
-			>
-				<p>${netIncome}</p>
-				<p class="label">net income</p>
-			</div>
-		</section>
+		<BottomLine {totalIncome} {totalExpenses} {netIncome} />
 	</div>
 </main>
 
@@ -234,6 +224,7 @@
 		justify-content: space-between;
 		padding: 0.5rem 0;
 		align-items: center;
+		background-color: blue;
 		cursor: pointer;
 	}
 
@@ -244,47 +235,7 @@
 		gap: 0.5rem;
 	}
 
-	.bottom-line {
-		margin-top: 2rem;
-		position: sticky;
-		bottom: 0;
-		background-color: #fff;
-		box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
-		padding: 1rem;
-		display: flex;
-		justify-content: space-around;
-		text-align: center;
-		font-weight: bold;
-	}
-
-	.section {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-	}
-
-	.section p {
-		margin: 0;
-		font-size: 1.5rem;
-	}
-
-	.label {
-		font-size: 1rem;
-		color: #666;
-	}
-
-	.net-income {
-		padding: 0.5rem;
-		border-radius: 8px;
-	}
-
-	.net-income.positive {
-		background-color: #d4edda;
-		color: #155724;
-	}
-
-	.net-income.negative {
-		background-color: #f8d7da;
-		color: #721c24;
+	.hidden-button {
+		display: none;
 	}
 </style>
