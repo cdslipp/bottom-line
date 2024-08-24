@@ -1,11 +1,33 @@
 <script>
+	// Import necessary functions from Svelte and InstantDB
 	import { getContext } from 'svelte';
 	import { tx, id } from '@instantdb/core';
+	import { browser } from '$app/environment';
+
+	// Get the InstantDB instance from the global context
 	const db = getContext('db');
 
 	let selectedFile = null;
 	let receipts = $state([]);
 	let isLoading = $state(false);
+
+	if (browser) {
+		//Subscribe to data changes in the `transactions` collection
+		db.subscribeQuery({ transactions: {} }, (resp) => {
+			if (resp.error) {
+				console.error('Error fetching receipts:', resp.error.message);
+				return;
+			}
+			if (resp.data) {
+				receipts = Object.values(resp.data.transactions).map((transaction) => ({
+					vendor: transaction.storeInfo.name,
+					total: transaction.totals.total,
+					details: transaction,
+					showDetails: false
+				}));
+			}
+		});
+	}
 
 	const handleFileChange = (event) => {
 		selectedFile = event.target.files[0];
@@ -26,9 +48,7 @@
 
 				const response = await fetch('/api/claude/analyze-receipt', {
 					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
+					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({ imageBase64: base64Image, mediaType: selectedFile.type })
 				});
 
@@ -40,22 +60,13 @@
 					throw new Error('The uploaded image is not a valid receipt.');
 				}
 
-				// Now call the second API to convert the result to JSON
-				console.log('About to call JSON api');
+				// Convert to JSON
 				const jsonResult = await convertToJSON(analysisResult);
-				isLoading = false;
 
+				// Save to InstantDB
 				db.transact(tx.transactions[id()].update(jsonResult));
-				// Append to the receipts list
-				receipts = [
-					...receipts,
-					{
-						vendor: jsonResult.storeInfo.name,
-						total: jsonResult.totals.total,
-						details: jsonResult,
-						showDetails: false
-					}
-				];
+
+				isLoading = false;
 			};
 			reader.readAsDataURL(selectedFile);
 		} catch (error) {
@@ -69,9 +80,7 @@
 		try {
 			const response = await fetch('/api/openai/convert-receipt-to-json', {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
+				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ text })
 			});
 
@@ -85,6 +94,10 @@
 
 	const toggleDetails = (index) => {
 		receipts[index].showDetails = !receipts[index].showDetails;
+	};
+
+	const deleteReceipt = (receiptId) => {
+		db.transact(tx.transactions[receiptId].delete());
 	};
 </script>
 
@@ -105,6 +118,13 @@
 			<li>
 				<div class="receipt-summary" on:click={() => toggleDetails(index)}>
 					<span>{receipt.vendor}</span> - <span>${receipt.total}</span>
+					<button
+						class="delete-button"
+						on:click={(event) => {
+							event.stopPropagation();
+							deleteReceipt(receipt.details.id);
+						}}>Delete</button
+					>
 				</div>
 				{#if receipt.showDetails}
 					<pre>{JSON.stringify(receipt.details, null, 2)}</pre>
@@ -136,10 +156,21 @@
 	}
 	.analyzer-container li {
 		margin: 10px 0;
+		position: relative;
 	}
 	.receipt-summary {
 		cursor: pointer;
 		user-select: none;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+	.delete-button {
+		background: red;
+		color: white;
+		border: none;
+		padding: 5px;
+		cursor: pointer;
 	}
 	.analyzer-container pre {
 		background: #f4f4f4;
