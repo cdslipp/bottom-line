@@ -31,21 +31,28 @@
 
 				const result = await response.json();
 				analysisResult = result.analysisResult;
-				console.log(analysisResult);
-				isLoading = false;
 
-				// // Now call the second API to convert the result to JSON
-				// await convertToJSON(analysisResult);
+				if (analysisResult.includes('Invalid. This is not a receipt.')) {
+					isLoading = false;
+					throw new Error('The uploaded image is not a valid receipt.');
+				}
+
+				// Now call the second API to convert the result to JSON
+				console.log('About to call JSON api');
+				await convertToJSON(analysisResult);
+				isLoading = false;
 			};
 			reader.readAsDataURL(selectedFile);
 		} catch (error) {
 			console.error('Error analyzing receipt with Claude:', error);
+			alert(error.message);
+			isLoading = false;
 		}
 	};
 
 	const convertToJSON = async (text) => {
 		try {
-			const response = await fetch('/api/claude/analyze-receipt/convert-to-json', {
+			const response = await fetch('/api/openai/convert-receipt-to-json', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -63,15 +70,14 @@
 
 <div class="analyzer-container">
 	<h1>OCR Receipt Analyzer</h1>
-	{isLoading}
 	<input type="file" accept="image/*" on:change={handleFileChange} />
 	<button on:click={analyzeReceiptClaude} aria-busy={isLoading}>
 		{#if isLoading}
 			analyzing...
 		{:else}
 			Analyze Receipt
-		{/if}</button
-	>
+		{/if}
+	</button>
 
 	{#if analysisResult}
 		<h2>Analysis Result:</h2>

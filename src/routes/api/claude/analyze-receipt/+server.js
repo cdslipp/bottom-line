@@ -19,7 +19,7 @@ export async function POST({ request }) {
 			max_tokens: 1000,
 			temperature: 0,
 			system:
-				'Tell me as many details as you can glean from this receipt. Please carefully interpret the date and time and when interpreting a confusing date, always assume the receipt uses ISO date format with the year first - ie yyyy/mm/dd OR yy/mm/dd. When you are finished, also please infer the timezone the purchase was made in. If the image does not appear to be a receipt, you must respond by simply saying: Invalid. This is not a receipt.',
+				'Tell me as many details as you can glean from this receipt. Please carefully interpret the date and time and when interpreting a confusing date, always assume the receipt uses ISO date format with the year first - ie yyyy/mm/dd OR yy/mm/dd. When you are finished, also please infer the timezone the purchase was made in, and format it like this example: America/Toronto. If the image does not appear to be a receipt, you must respond by simply saying: Invalid. This is not a receipt. One more time, please carefully check the date on the receipt, and if you are uncertain, assume that the YEAR comes first, ie yy/mm/dd',
 			messages: [
 				{
 					role: 'user',

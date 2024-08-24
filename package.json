@@ -36,6 +36,7 @@
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.27.0",
 		"@picocss/pico": "^2.0.6",
-		"dexie": "^4.0.8"
+		"dexie": "^4.0.8",
+		"openai": "^4.56.0"
 	}
 }
