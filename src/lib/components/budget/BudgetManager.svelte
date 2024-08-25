@@ -23,32 +23,56 @@
 	let newExpenseCategory = $state('');
 	let newExpenseAmount = $state('');
 
-	if (browser) {
-		db.subscribeQuery({ budgets: {}, categories: {} }, (resp) => {
-			if (resp.error) {
-				console.error('Error fetching data:', resp.error.message);
-				return;
-			}
-			if (resp.data) {
-				budget = resp.data.budgets[budgetId];
+	// New state variables for budget settings
+	let settingsModalOpen = $state(false);
+	let newBudgetName = $state('');
+	let budgetStartDate = $state('');
+	let budgetEndDate = $state('');
 
-				if (!budget) {
-					console.error('Budget not found');
+	if (browser) {
+		db.subscribeQuery(
+			{
+				budgets: {
+					$: {
+						where: {
+							id: budgetId
+						}
+					}
+				},
+				categories: {}
+			},
+			(resp) => {
+				if (resp.error) {
+					console.error('Error fetching data:', resp.error.message);
 					return;
 				}
+				if (resp.data) {
+					console.log('RESPONSE', resp.data.budgets);
+					budget = resp.data.budgets[0];
 
-				const allCategories = Object.values(resp.data.categories).map((category) => ({
-					...category,
-					showDetails: false
-				}));
+					if (!budget) {
+						console.error('Budget not found');
+						return;
+					}
 
-				categories = allCategories.filter((cat) => cat.budgetId === budgetId);
+					// Initialize settings form fields
+					newBudgetName = budget.name || '';
+					budgetStartDate = budget.startDate || '';
+					budgetEndDate = budget.endDate || '';
 
-				// Separate income and expense categories
-				incomeCategories = categories.filter((cat) => cat.type === 'income');
-				expenseCategories = categories.filter((cat) => cat.type === 'expense');
+					const allCategories = Object.values(resp.data.categories).map((category) => ({
+						...category,
+						showDetails: false
+					}));
+
+					categories = allCategories.filter((cat) => cat.budgetId === budgetId);
+
+					// Separate income and expense categories
+					incomeCategories = categories.filter((cat) => cat.type === 'income');
+					expenseCategories = categories.filter((cat) => cat.type === 'expense');
+				}
 			}
-		});
+		);
 	}
 
 	const addCategory = async (type) => {
@@ -101,15 +125,33 @@
 		selectedCategory = null;
 	};
 
-	const totalIncome = $derived(() =>
+	const totalIncome = $derived(
 		incomeCategories.reduce((sum, cat) => sum + cat.budgetedAmount, 0).toFixed(2)
 	);
-	const totalExpenses = $derived(() =>
+	const totalExpenses = $derived(
 		expenseCategories.reduce((sum, cat) => sum + cat.budgetedAmount, 0).toFixed(2)
 	);
-	const netIncome = $derived(() =>
-		(parseFloat(totalIncome) - parseFloat(totalExpenses)).toFixed(2)
-	);
+	const netIncome = $derived((parseFloat(totalIncome) - parseFloat(totalExpenses)).toFixed(2));
+
+	// New functions for budget settings
+	const openSettingsModal = () => {
+		settingsModalOpen = true;
+	};
+
+	const closeSettingsModal = () => {
+		settingsModalOpen = false;
+	};
+
+	const updateBudgetSettings = async () => {
+		await db.transact([
+			tx.budgets[budgetId].update({
+				name: newBudgetName,
+				startDate: budgetStartDate,
+				endDate: budgetEndDate
+			})
+		]);
+		closeSettingsModal();
+	};
 </script>
 
 <main class="budget-container">
@@ -117,6 +159,7 @@
 	<header class="budget-header">
 		<h1>{budget?.name || 'Budget'}</h1>
 		<p>{budgetId}</p>
+		<button on:click={openSettingsModal}>Budget Settings</button>
 	</header>
 
 	<div id="page-content">
@@ -180,6 +223,33 @@
 
 		<BottomLine {totalIncome} {totalExpenses} {netIncome} />
 	</div>
+
+	<dialog open={settingsModalOpen}>
+		<article>
+			<header>
+				<h3>Budget Settings</h3>
+				<button aria-label="Close" class="close" on:click={closeSettingsModal}></button>
+			</header>
+			<form on:submit|preventDefault={updateBudgetSettings}>
+				<label for="budgetName">
+					Budget Name
+					<input type="text" id="budgetName" bind:value={newBudgetName} required />
+				</label>
+				<label for="startDate">
+					Start Date
+					<input type="date" id="startDate" bind:value={budgetStartDate} />
+				</label>
+				<label for="endDate">
+					End Date
+					<input type="date" id="endDate" bind:value={budgetEndDate} />
+				</label>
+				<footer>
+					<button type="submit">Save Changes</button>
+					<button type="button" class="secondary" on:click={closeSettingsModal}>Cancel</button>
+				</footer>
+			</form>
+		</article>
+	</dialog>
 </main>
 
 <style>
@@ -192,6 +262,9 @@
 	.budget-header {
 		text-align: center;
 		margin-bottom: 2rem;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
 	}
 
 	.container {
@@ -232,5 +305,15 @@
 
 	.hidden-button {
 		display: none;
+	}
+
+	dialog {
+		width: 100%;
+		max-width: 500px;
+	}
+
+	dialog article {
+		max-height: 80vh;
+		overflow-y: auto;
 	}
 </style>
