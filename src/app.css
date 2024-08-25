@@ -1,0 +1,118 @@
+/* app.css */
+
+/* General styling for all number input fields to remove outer and inner spin buttons */
+input.moneyInput[type='text'] {
+	-moz-appearance: textfield;
+}
+
+input.moneyInput::-webkit-outer-spin-button,
+input.moneyInput::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
+/* Further styles for money input fields */
+input.moneyInput {
+	width: 150px;
+	text-align: right;
+}
+
+/* Drawer CSS */
+* {
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	-o-box-sizing: border-box;
+	box-sizing: border-box;
+	-webkit-transition: 0.25s ease-in-out;
+	-moz-transition: 0.25s ease-in-out;
+	-o-transition: 0.25s ease-in-out;
+	transition: 0.25s ease-in-out;
+	margin: 0;
+	padding: 0;
+	-webkit-text-size-adjust: none;
+}
+
+html,
+body {
+	height: 100%;
+	overflow: scroll;
+}
+
+#drawer {
+	position: fixed;
+	top: 0;
+	right: -40dvw; /* Change width here */
+	height: 100%;
+	width: 40dvw; /* Change width here */
+	background: #f7f7f7;
+	overflow-x: hidden;
+	overflow-y: scroll;
+	padding: 20px;
+	color: #333;
+	-webkit-overflow-scrolling: touch;
+	box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+#page-content {
+	margin-right: 0px;
+	margin-top: 50px;
+	width: 100%;
+	height: calc(100% - 50px);
+	overflow-x: hidden;
+	overflow-y: scroll;
+	-webkit-overflow-scrolling: touch;
+	padding: 20px;
+}
+
+#drawer-toggle:checked ~ #drawer-toggle-label {
+	height: 100%;
+	width: calc(100% - 40dvw); /* Change width here */
+	background: rgba(255, 255, 255, 0.8);
+}
+
+#drawer-toggle:checked ~ #drawer-toggle-label,
+#drawer-toggle:checked ~ header {
+	right: 40dvw; /* Change width here */
+}
+
+#drawer-toggle:checked ~ #drawer {
+	right: 0px;
+}
+
+#drawer-toggle:checked ~ #page-content {
+	margin-right: 40dvw; /* Change width here */
+}
+
+#drawer ul {
+	list-style-type: none;
+	padding: 0;
+}
+
+#drawer ul a {
+	display: block;
+	padding: 10px;
+	color: #333;
+	text-decoration: none;
+}
+
+#drawer ul a:hover {
+	color: #000;
+}
+
+@media all and (max-width: 350px) {
+	#drawer-toggle:checked ~ #drawer-toggle-label {
+		height: 100%;
+		width: 50px;
+	}
+	#drawer-toggle:checked ~ #drawer-toggle-label,
+	#drawer-toggle:checked ~ header {
+		right: calc(100% - 50px);
+	}
+	#drawer-toggle:checked ~ #drawer {
+		width: calc(100% - 50px);
+		padding: 20px;
+	}
+	#drawer-toggle:checked ~ #page-content {
+		margin-right: calc(100% - 50px);
+	}
+}
