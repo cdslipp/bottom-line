@@ -89,6 +89,11 @@
 					budgetId
 				})
 			]);
+			await db.transact([
+				tx.budgets[budgetId].update({
+					netIncome: parseFloat(netIncome)
+				})
+			]);
 
 			if (type === 'income') {
 				newIncomeCategory = '';
@@ -103,6 +108,11 @@
 	const updateCategoryAmount = async (category, amount) => {
 		const newAmount = parseFloat(amount) || 0;
 		await db.transact([tx.categories[category.id].update({ budgetedAmount: newAmount })]);
+		await db.transact([
+			tx.budgets[budgetId].update({
+				netIncome: parseFloat(netIncome)
+			})
+		]);
 	};
 
 	const clearCategories = async () => {
