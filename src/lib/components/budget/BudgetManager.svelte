@@ -168,8 +168,7 @@
 	<Drawer {selectedCategory} isOpen={drawerOpen} on:close={handleCloseDrawer} />
 	<header class="budget-header">
 		<h1>{budget?.name || 'Budget'}</h1>
-		<p>{budgetId}</p>
-		<button on:click={openSettingsModal}>Budget Settings</button>
+		<button on:click={openSettingsModal}>Settings</button>
 	</header>
 
 	<div id="page-content">
@@ -245,14 +244,16 @@
 					Budget Name
 					<input type="text" id="budgetName" bind:value={newBudgetName} required />
 				</label>
-				<label for="startDate">
-					Start Date
-					<input type="date" id="startDate" bind:value={budgetStartDate} />
-				</label>
-				<label for="endDate">
-					End Date
-					<input type="date" id="endDate" bind:value={budgetEndDate} />
-				</label>
+				<fieldset role="group">
+					<label for="startDate">
+						Start Date
+						<input type="date" id="startDate" bind:value={budgetStartDate} />
+					</label>
+					<label for="endDate">
+						End Date
+						<input type="date" id="endDate" bind:value={budgetEndDate} />
+					</label>
+				</fieldset>
 				<footer>
 					<button type="submit">Save Changes</button>
 					<button type="button" class="secondary" on:click={closeSettingsModal}>Cancel</button>
