@@ -182,12 +182,9 @@
 				<h2>Income Categories</h2>
 				<div class="categories">
 					{#each incomeCategories as category (category.id)}
-						<div class="category-item" on:click={() => openCategoryDrawer(category)}>
-							<span>{category.name}</span>
-							<CurrencyInput
-								bind:value={category.budgetedAmount}
-								on:input={(e) => updateCategoryAmount(category, e.target.value)}
-							/>
+						<div class="category-item">
+							<div on:click={() => openCategoryDrawer(category)}>{category.name}</div>
+							<CurrencyInput mode="thousands" bind:value={category.budgetedAmount} />
 						</div>
 					{/each}
 					<div class="add-category">
@@ -220,7 +217,7 @@
 						<form on:submit|preventDefault={() => addCategory('expense')}>
 							<fieldset role="group">
 								<input type="text" bind:value={newExpenseCategory} placeholder="Category Name" />
-								<CurrencyInput bind:value={newExpenseAmount} />
+								<CurrencyInput mode="dollars" bind:value={newExpenseAmount} />
 								<!-- Hidden Add Button -->
 								<button type="submit" class="hidden-button">Add</button>
 							</fieldset>
