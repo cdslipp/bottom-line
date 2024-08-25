@@ -1,75 +1,87 @@
 <script>
-	import TransactionLine from './TransactionLine.svelte';
 	import { createEventDispatcher } from 'svelte';
+	import { getContext } from 'svelte';
+	import { analyzeReceiptFile, deleteReceipt } from '$lib/helpers/receipts/receiptHelpers';
+	import ReceiptList from '$lib/components/receipts/ReceiptList.svelte';
+	import { browser } from '$app/environment';
 
-	export let selectedCategory = null;
-	export let isOpen = false;
+	let { selectedCategory = null, isOpen = false } = $props();
 
 	const dispatch = createEventDispatcher();
+	let db = null;
+	let receipts = $state([]);
+	let isLoading = $state(false);
+	let selectedFile = null;
 
-	let newTransactionDate = new Date().toISOString().split('T')[0];
-	let newTransactionName = '';
-	let newTransactionAmount = '';
+	if (browser) {
+		db = getContext('db');
+		db.subscribeQuery({ transactions: {} }, (resp) => {
+			if (resp.error) {
+				console.error('Error fetching receipts:', resp.error.message);
+				return;
+			}
+			if (resp.data) {
+				receipts = Object.values(resp.data.transactions)
+					.filter((transaction) => transaction.category === selectedCategory.id) // Filter transactions by selected category
+					.map((transaction) => ({
+						...transaction,
+						showDetails: false
+					}));
+			}
+		});
+	}
+
+	const handleFileChange = (event) => {
+		selectedFile = event.target.files[0];
+	};
+
+	const analyzeReceiptClaude = async () => {
+		if (!selectedFile) {
+			alert('Please select a file first.');
+			return;
+		}
+
+		isLoading = true;
+
+		try {
+			const jsonResult = await analyzeReceiptFile(selectedFile, [], db, selectedCategory.id); // Pass selectedCategory.id
+			isLoading = false;
+		} catch (error) {
+			console.error('Error analyzing receipt:', error);
+			alert(error.message);
+			isLoading = false;
+		}
+	};
+
+	const handleDeleteReceipt = (id) => {
+		deleteReceipt(id, db);
+	};
 
 	const closeDrawer = () => {
 		dispatch('close');
-	};
-
-	const handleAddTransaction = (event) => {
-		event.preventDefault();
-		if (newTransactionName && newTransactionAmount) {
-			const newTransaction = {
-				id: Date.now(),
-				date: newTransactionDate,
-				description: newTransactionName,
-				total: parseFloat(newTransactionAmount).toFixed(2)
-			};
-			dispatch('addTransaction', {
-				categoryId: selectedCategory.id,
-				transaction: newTransaction
-			});
-
-			// Reset form fields
-			newTransactionName = '';
-			newTransactionAmount = '';
-			// Keep the date as is for quick entry of multiple transactions on the same date
-		}
 	};
 </script>
 
 {#if isOpen}
 	<nav class="drawer">
 		<div class="drawer-header">
-			<h2>Edit {selectedCategory?.name}</h2>
-			<button on:click={closeDrawer}>Close</button>
+			<h2>Manage {selectedCategory?.name}</h2>
+			<button onclick={closeDrawer}>Close</button>
 		</div>
 		{#if selectedCategory}
-			<input type="text" bind:value={selectedCategory.name} class="category-name-input" />
-
-			<form on:submit={handleAddTransaction} class="add-transaction-form">
-				<input type="date" bind:value={newTransactionDate} required />
-				<input
-					type="text"
-					bind:value={newTransactionName}
-					placeholder="Transaction name"
-					required
-				/>
-				<input
-					type="number"
-					bind:value={newTransactionAmount}
-					placeholder="Amount"
-					step="0.01"
-					required
-				/>
-				<button type="submit">Add Transaction</button>
-			</form>
-
-			<h3>Transactions:</h3>
-			<div class="transaction-list">
-				{#each selectedCategory.transactions as transaction (transaction.id)}
-					<TransactionLine {transaction} />
-				{/each}
-			</div>
+			<article>
+				<h3>Upload Receipt</h3>
+				<input type="file" accept="image/*" onchange={handleFileChange} />
+				<button onclick={analyzeReceiptClaude} aria-busy={isLoading}>
+					{#if isLoading}
+						analyzing...
+					{:else}
+						Analyze Receipt
+					{/if}
+				</button>
+			</article>
+			<h3>Receipts for {selectedCategory.name}</h3>
+			<ReceiptList {receipts} categories={[selectedCategory]} on:delete={handleDeleteReceipt} />
 		{/if}
 	</nav>
 {/if}
@@ -98,35 +110,24 @@
 		margin-bottom: 20px;
 	}
 
-	.category-name-input {
-		width: 100%;
+	h3 {
 		margin-bottom: 10px;
-		padding: 10px;
 	}
 
-	.add-transaction-form {
+	.upload-receipt {
 		display: flex;
 		flex-direction: column;
 		gap: 10px;
 		margin-bottom: 20px;
 	}
 
-	.add-transaction-form input {
-		padding: 5px;
-	}
-
-	.add-transaction-form button {
+	.drawer button {
 		background: #007bff;
 		color: white;
 		padding: 10px;
 		border: none;
 		border-radius: 5px;
 		cursor: pointer;
-	}
-
-	.transaction-list {
-		display: flex;
-		flex-direction: column;
-		gap: 10px;
+		margin-top: 10px;
 	}
 </style>

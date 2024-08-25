@@ -4,7 +4,7 @@ export function deleteReceipt(receiptId, db) {
 	db.transact(tx.transactions[receiptId].delete());
 }
 
-export const analyzeReceiptFile = async (file, categories, db) => {
+export const analyzeReceiptFile = async (file, categories, db, categoryId) => {
 	const reader = new FileReader();
 
 	return new Promise((resolve, reject) => {
@@ -28,25 +28,7 @@ export const analyzeReceiptFile = async (file, categories, db) => {
 				// Convert to JSON
 				const jsonResult = await convertToJSON(analysisResult);
 
-				// Prompt user for category
-				const categoryName = prompt('Enter the category for this receipt:');
-				let categoryId;
-
-				// Check if category exists
-				const existingCategory = categories.find(
-					(cat) => cat.name.toLowerCase() === categoryName.toLowerCase()
-				);
-				if (existingCategory) {
-					categoryId = existingCategory.id;
-				} else {
-					// Create a new category
-					categoryId = id(); // Generate a unique ID for the new category
-					db.transact(tx.categories[categoryId].update({ name: categoryName }));
-				}
-
-				// Save to InstantDB
-				console.log('saving receipt to intant db');
-				console.log(jsonResult);
+				// Save to InstantDB with category association
 				db.transact(tx.transactions[id()].update({ ...jsonResult, category: categoryId }));
 
 				resolve(jsonResult);

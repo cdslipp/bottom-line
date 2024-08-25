@@ -45,7 +45,6 @@
 		});
 	}
 
-	// Function to add income category
 	const addIncomeCategory = async (event) => {
 		event.preventDefault();
 
@@ -68,7 +67,6 @@
 		}
 	};
 
-	// Function to add expense category
 	const addExpenseCategory = async (event) => {
 		event.preventDefault();
 
@@ -117,35 +115,9 @@
 		expenseCategories = [];
 	};
 
-	const totalIncome = $derived(
-		incomeCategories.reduce((sum, cat) => sum + cat.budgetedAmount, 0).toFixed(2)
-	);
-	const totalExpenses = $derived(
-		expenseCategories.reduce((sum, cat) => sum + cat.budgetedAmount, 0).toFixed(2)
-	);
-	const netIncome = $derived((parseFloat(totalIncome) - parseFloat(totalExpenses)).toFixed(2));
-
 	const openCategoryDrawer = (category) => {
 		selectedCategory = category;
 		drawerOpen = true;
-	};
-
-	const handleAddTransaction = (event) => {
-		const { categoryId, transaction } = event.detail;
-		const allCategories = [...incomeCategories, ...expenseCategories];
-		const categoryType = allCategories.find((cat) => cat.id === categoryId)?.type;
-
-		db.transact(tx.transactions[transaction.id].update(transaction)).then(() => {
-			if (categoryType === 'income') {
-				incomeCategories = incomeCategories.map((cat) =>
-					cat.id === categoryId ? { ...cat, transactions: [...cat.transactions, transaction] } : cat
-				);
-			} else {
-				expenseCategories = expenseCategories.map((cat) =>
-					cat.id === categoryId ? { ...cat, transactions: [...cat.transactions, transaction] } : cat
-				);
-			}
-		});
 	};
 
 	const handleCloseDrawer = () => {
@@ -153,18 +125,17 @@
 		selectedCategory = null;
 	};
 
-	$effect(() => {
-		console.log(totalIncome);
-	});
+	const totalIncome = $derived(
+		incomeCategories.reduce((sum, cat) => sum + cat.budgetedAmount, 0).toFixed(2)
+	);
+	const totalExpenses = $derived(
+		expenseCategories.reduce((sum, cat) => sum + cat.budgetedAmount, 0).toFixed(2)
+	);
+	const netIncome = $derived((parseFloat(totalIncome) - parseFloat(totalExpenses)).toFixed(2));
 </script>
 
 <main class="budget-container">
-	<Drawer
-		{selectedCategory}
-		isOpen={drawerOpen}
-		on:addTransaction={handleAddTransaction}
-		on:close={handleCloseDrawer}
-	/>
+	<Drawer {selectedCategory} isOpen={drawerOpen} on:close={handleCloseDrawer} />
 	<header class="budget-header">
 		<h1>Budget</h1>
 	</header>
