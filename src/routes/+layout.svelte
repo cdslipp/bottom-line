@@ -15,4 +15,16 @@
 	setContext('db', db);
 </script>
 
-<slot />
+<main class="container-fluid">
+	<nav>
+		<ul>
+			<li><strong>Bottom Line</strong></li>
+		</ul>
+		<ul>
+			<li><a href="/budget">Budget</a></li>
+			<li><a href="/analyze">Upload Receipts</a></li>
+		</ul>
+	</nav>
+
+	<slot />
+</main>

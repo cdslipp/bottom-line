@@ -21,15 +21,6 @@
 				{categories.find((cat) => cat.id === receipt.category)?.name || 'Uncategorized'}
 			</div>
 			<span>{receipt.storeInfo.name}</span> - <span>${receipt.totals.total}</span>
-			<button
-				class="delete-button"
-				on:click={(event) => {
-					event.stopPropagation();
-					handleDeleteReceipt(receipt.id);
-				}}
-			>
-				Delete
-			</button>
 		</div>
 
 		{#if receipt.showDetails}
@@ -63,6 +54,15 @@
 	<p><b>Subtotal:</b> ${receipt.totals.subtotal.toFixed(2)}</p>
 	<p><b>Tax ({receipt.totals.taxType}):</b> ${receipt.totals.taxAmount.toFixed(2)}</p>
 	<p><b>Total:</b> ${receipt.totals.total.toFixed(2)}</p>
+	<button
+		class="delete-button"
+		on:click={(event) => {
+			event.stopPropagation();
+			handleDeleteReceipt(receipt.id);
+		}}
+	>
+		Delete
+	</button>
 {/snippet}
 
 <h2>Uploaded Receipts</h2>

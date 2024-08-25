@@ -58,16 +58,17 @@
 </script>
 
 <div class="analyzer-container">
-	<h1>Receipt Analyzer</h1>
-	<input type="file" accept="image/*" on:change={handleFileChange} />
-	<button on:click={analyzeReceiptClaude} aria-busy={isLoading}>
-		{#if isLoading}
-			analyzing...
-		{:else}
-			Analyze Receipt
-		{/if}
-	</button>
-
+	<article>
+		<h1>Receipt Analyzer</h1>
+		<input type="file" accept="image/*" on:change={handleFileChange} />
+		<button on:click={analyzeReceiptClaude} aria-busy={isLoading}>
+			{#if isLoading}
+				analyzing...
+			{:else}
+				Analyze Receipt
+			{/if}
+		</button>
+	</article>
 	<ReceiptList {receipts} {categories} />
 </div>
 
