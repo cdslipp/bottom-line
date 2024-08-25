@@ -21,7 +21,7 @@
 			<li><strong>Bottom Line</strong></li>
 		</ul>
 		<ul>
-			<li><a href="/budget">Budget</a></li>
+			<li><a href="/">Budgets</a></li>
 			<li><a href="/analyze">Upload Receipts</a></li>
 		</ul>
 	</nav>

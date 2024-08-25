@@ -6,12 +6,14 @@
 	import { tx, id } from '@instantdb/core';
 	import { browser } from '$app/environment';
 
+	let { budgetId } = $props();
+
 	const db = getContext('db');
 
+	let budget = $state(null);
 	let incomeCategories = $state([]);
 	let expenseCategories = $state([]);
 	let categories = $state([]);
-	let budgets = $state([]);
 	let selectedCategory = $state(null);
 	let drawerOpen = $state(false);
 	let isLoading = $state(false);
@@ -22,95 +24,69 @@
 	let newExpenseAmount = $state('');
 
 	if (browser) {
-		db.subscribeQuery({ categories: {}, budgets: {} }, (resp) => {
+		db.subscribeQuery({ budgets: {}, categories: {} }, (resp) => {
 			if (resp.error) {
 				console.error('Error fetching data:', resp.error.message);
 				return;
 			}
 			if (resp.data) {
+				budget = resp.data.budgets[budgetId];
+
+				if (!budget) {
+					console.error('Budget not found');
+					return;
+				}
+
 				const allCategories = Object.values(resp.data.categories).map((category) => ({
 					...category,
 					showDetails: false
 				}));
-				categories = allCategories;
+
+				categories = allCategories.filter((cat) => cat.budgetId === budgetId);
 
 				// Separate income and expense categories
-				incomeCategories = allCategories.filter((cat) => cat.type === 'income');
-				expenseCategories = allCategories.filter((cat) => cat.type === 'expense');
-
-				budgets = Object.values(resp.data.budgets).map((budget) => ({
-					...budget
-				}));
+				incomeCategories = categories.filter((cat) => cat.type === 'income');
+				expenseCategories = categories.filter((cat) => cat.type === 'expense');
 			}
 		});
 	}
 
-	const addIncomeCategory = async (event) => {
-		event.preventDefault();
+	const addCategory = async (type) => {
+		const newCategoryName = type === 'income' ? newIncomeCategory : newExpenseCategory;
+		const newCategoryAmount = type === 'income' ? newIncomeAmount : newExpenseAmount;
 
-		if (newIncomeCategory.trim()) {
+		if (newCategoryName.trim()) {
 			const categoryId = id();
 			await db.transact([
 				tx.categories[categoryId].update({
-					name: newIncomeCategory,
-					type: 'income',
-					budgetedAmount: parseFloat(newIncomeAmount) || 0
-				}),
-				tx.budgets[categoryId].update({
-					category: categoryId,
-					budgetedAmount: parseFloat(newIncomeAmount) || 0
+					name: newCategoryName,
+					type,
+					budgetedAmount: parseFloat(newCategoryAmount) || 0,
+					budgetId
 				})
 			]);
 
-			newIncomeCategory = '';
-			newIncomeAmount = '';
+			if (type === 'income') {
+				newIncomeCategory = '';
+				newIncomeAmount = '';
+			} else {
+				newExpenseCategory = '';
+				newExpenseAmount = '';
+			}
 		}
 	};
 
-	const addExpenseCategory = async (event) => {
-		event.preventDefault();
-
-		if (newExpenseCategory.trim()) {
-			const categoryId = id();
-			await db.transact([
-				tx.categories[categoryId].update({
-					name: newExpenseCategory,
-					type: 'expense',
-					budgetedAmount: parseFloat(newExpenseAmount) || 0
-				}),
-				tx.budgets[categoryId].update({
-					category: categoryId,
-					budgetedAmount: parseFloat(newExpenseAmount) || 0
-				})
-			]);
-
-			newExpenseCategory = '';
-			newExpenseAmount = '';
-		}
-	};
-
-	const updateCategoryAmount = async (category, type, amount) => {
+	const updateCategoryAmount = async (category, amount) => {
 		const newAmount = parseFloat(amount) || 0;
-		if (type === 'income') {
-			await db.transact([
-				tx.categories[category.id].update({ budgetedAmount: newAmount }),
-				tx.budgets[category.id].update({ budgetedAmount: newAmount })
-			]);
-		} else {
-			await db.transact([
-				tx.categories[category.id].update({ budgetedAmount: newAmount }),
-				tx.budgets[category.id].update({ budgetedAmount: newAmount })
-			]);
-		}
+		await db.transact([tx.categories[category.id].update({ budgetedAmount: newAmount })]);
 	};
 
 	const clearCategories = async () => {
 		await db.transact([
 			...incomeCategories.map((cat) => tx.categories[cat.id].delete()),
-			...expenseCategories.map((cat) => tx.categories[cat.id].delete()),
-			...incomeCategories.map((cat) => tx.budgets[cat.id].delete()),
-			...expenseCategories.map((cat) => tx.budgets[cat.id].delete())
+			...expenseCategories.map((cat) => tx.categories[cat.id].delete())
 		]);
+
 		incomeCategories = [];
 		expenseCategories = [];
 	};
@@ -125,19 +101,22 @@
 		selectedCategory = null;
 	};
 
-	const totalIncome = $derived(
+	const totalIncome = $derived(() =>
 		incomeCategories.reduce((sum, cat) => sum + cat.budgetedAmount, 0).toFixed(2)
 	);
-	const totalExpenses = $derived(
+	const totalExpenses = $derived(() =>
 		expenseCategories.reduce((sum, cat) => sum + cat.budgetedAmount, 0).toFixed(2)
 	);
-	const netIncome = $derived((parseFloat(totalIncome) - parseFloat(totalExpenses)).toFixed(2));
+	const netIncome = $derived(() =>
+		(parseFloat(totalIncome) - parseFloat(totalExpenses)).toFixed(2)
+	);
 </script>
 
 <main class="budget-container">
 	<Drawer {selectedCategory} isOpen={drawerOpen} on:close={handleCloseDrawer} />
 	<header class="budget-header">
-		<h1>Budget</h1>
+		<h1>{budget?.name || 'Budget'}</h1>
+		<p>{budgetId}</p>
 	</header>
 
 	<div id="page-content">
@@ -155,12 +134,12 @@
 							<span>{category.name}</span>
 							<CurrencyInput
 								bind:value={category.budgetedAmount}
-								on:input={(e) => updateCategoryAmount(category, 'income', e.target.value)}
+								on:input={(e) => updateCategoryAmount(category, e.target.value)}
 							/>
 						</div>
 					{/each}
 					<div class="add-category">
-						<form on:submit={addIncomeCategory}>
+						<form on:submit|preventDefault={() => addCategory('income')}>
 							<fieldset role="group">
 								<input type="text" bind:value={newIncomeCategory} placeholder="Category Name" />
 								<CurrencyInput bind:value={newIncomeAmount} />
@@ -181,12 +160,12 @@
 							<span>{category.name}</span>
 							<CurrencyInput
 								bind:value={category.budgetedAmount}
-								on:input={(e) => updateCategoryAmount(category, 'expense', e.target.value)}
+								on:input={(e) => updateCategoryAmount(category, e.target.value)}
 							/>
 						</div>
 					{/each}
 					<div class="add-category">
-						<form on:submit={addExpenseCategory}>
+						<form on:submit|preventDefault={() => addCategory('expense')}>
 							<fieldset role="group">
 								<input type="text" bind:value={newExpenseCategory} placeholder="Category Name" />
 								<CurrencyInput bind:value={newExpenseAmount} />
@@ -204,7 +183,6 @@
 </main>
 
 <style>
-	/* Styles remain the same */
 	.budget-container {
 		max-width: 1200px;
 		margin: auto;
