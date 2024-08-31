@@ -8,5 +8,7 @@
 	console.log(user);
 </script>
 
-<h1>Welcome to your budget, {user}</h1>
+{#if user}
+	<h1>Welcome to your budget, {user.email}</h1>
+{/if}
 <BudgetList />
