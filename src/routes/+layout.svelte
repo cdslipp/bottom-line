@@ -3,53 +3,78 @@
 	import '../app.css';
 	import { browser } from '$app/environment';
 	import { setContext } from 'svelte';
-	import { authenticatePassageUser } from '$lib/auth/passage';
-	import { getDB, validateUser } from '$lib/auth/instantDB';
+	import { onMount } from 'svelte';
+	import { getDB } from '$lib/auth/instantDB';
+	import { Passage } from '@passageidentity/passage-js';
 
-	let user = $state(null);
-	let isLoading = $state(true);
+	/** @type {import('./$types').LayoutData} */
+	let { data } = $props();
+
+	let user = $state(data.user);
+	let isLoading = $state(!user);
 	let error = $state(null);
 
 	const db = getDB();
 	setContext('db', db);
+	setContext('user', user);
 
-	$effect(() => {
-		console.log('User:', user);
-		if (user) {
-			setContext('user', user);
+	onMount(async () => {
+		if (browser && !user) {
+			try {
+				const passage = new Passage(import.meta.env.VITE_PUBLIC_PASSAGE_APP_ID);
+				const passageUser = passage.getCurrentUser();
+				if (passageUser) {
+					const userInfo = await passageUser.userInfo();
+					if (userInfo) {
+						user = userInfo;
+						setContext('user', user);
+						syncUserWithInstantDB(user);
+					}
+				}
+			} catch (e) {
+				console.error('Error fetching client-side user info:', e);
+				error = e.message;
+			} finally {
+				isLoading = false;
+			}
 		}
 	});
 
-	if (browser) {
-		initializeUser();
+	async function syncUserWithInstantDB(passageUser) {
+		db.subscribeQuery({ users: { $: { where: { passageId: passageUser.id } } } }, (resp) => {
+			if (resp.error) {
+				console.error('Error fetching user from InstantDB:', resp.error);
+			} else if (resp.data && resp.data.users && resp.data.users.length > 0) {
+				// User exists in InstantDB, update if necessary
+				const dbUser = resp.data.users[0];
+				if (needsUpdate(dbUser, passageUser)) {
+					updateUser(dbUser.id, passageUser);
+				}
+			} else {
+				// User doesn't exist in InstantDB, create new user
+				createNewUser(passageUser);
+			}
+		});
 	}
 
-	async function initializeUser() {
-		try {
-			const passageUser = await authenticatePassageUser();
-			if (passageUser && passageUser.id) {
-				console.log('Passage user authenticated:', passageUser);
-				db.subscribeQuery({ users: { $: { where: { passageId: passageUser.id } } } }, (resp) => {
-					if (resp.error) {
-						console.error('Error fetching user:', resp.error);
-						error = resp.error.message;
-					} else if (resp.data && resp.data.users && resp.data.users.length > 0) {
-						user = resp.data.users[0];
-					} else {
-						// User doesn't exist, create a new one
-						createNewUser(passageUser);
-					}
-					isLoading = false;
-				});
-			} else {
-				console.log('No authenticated Passage user');
-				isLoading = false;
-			}
-		} catch (e) {
-			console.error('Error:', e);
-			error = e.message;
-			isLoading = false;
-		}
+	function needsUpdate(dbUser, passageUser) {
+		// Compare relevant fields and return true if an update is needed
+		return (
+			dbUser.email !== passageUser.email ||
+			dbUser.emailVerified !== passageUser.email_verified ||
+			dbUser.lastLoginAt !== passageUser.last_login_at
+		);
+	}
+
+	async function updateUser(userId, passageUser) {
+		await db.transact(
+			db.tx.users[userId].update({
+				email: passageUser.email,
+				emailVerified: passageUser.email_verified,
+				lastLoginAt: passageUser.last_login_at,
+				updatedAt: new Date().toISOString()
+			})
+		);
 	}
 
 	async function createNewUser(passageUser) {
@@ -63,14 +88,7 @@
 			createdAt: passageUser.created_at,
 			updatedAt: passageUser.updated_at
 		};
-		try {
-			await db.transact(db.tx.users[newUser.id].update(newUser));
-			user = newUser;
-			setContext('user', user);
-		} catch (error) {
-			console.error('Error creating user:', error);
-			error = 'Failed to create new user';
-		}
+		await db.transact(db.tx.users[newUser.id].update(newUser));
 	}
 </script>
 
@@ -91,7 +109,7 @@
 		<p>Error: {error}</p>
 	{:else if user}{:else}
 		<p>Please log in</p>
-		<!-- Add login component here if needed -->
+		<!-- Add Passage login component here -->
 	{/if}
 	<slot />
 </main>
