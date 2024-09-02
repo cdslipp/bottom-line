@@ -10,7 +10,6 @@ const passageConfig = {
 /** @type {import('@sveltejs/kit').Handle} */
 export async function handle({ event, resolve }) {
 	const authToken = event.cookies.get('psg_auth_token');
-	console.log('Auth token: ', authToken);
 
 	if (authToken) {
 		const passage = new Passage(passageConfig);
