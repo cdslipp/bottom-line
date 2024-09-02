@@ -2,9 +2,10 @@
 	import { getContext } from 'svelte';
 	import { tx, id } from '@instantdb/core';
 	import { browser } from '$app/environment';
-	import { onMount } from 'svelte';
 
 	const db = getContext('db');
+	const instantUser = getContext('instantUser');
+	console.log('Instant User:', instantUser);
 
 	let budgets = $state([]);
 	let newBudgetName = $state('');
@@ -31,13 +32,22 @@
 			isLoading = true;
 			const budgetId = id();
 			const dateNow = new Date().toISOString();
+
+			if (!instantUser) {
+				console.error('Current user not found');
+				isLoading = false;
+				return;
+			}
+
+			console.log('making new record instant db is', instantUser.instantID);
 			await db.transact(
 				tx.budgets[budgetId].update({
 					id: budgetId,
 					name: newBudgetName,
 					netIncome: 0,
 					lastModified: dateNow,
-					createdAt: dateNow
+					createdAt: dateNow,
+					owner: instantUser.id // Set the owner using the instantID
 				})
 			);
 

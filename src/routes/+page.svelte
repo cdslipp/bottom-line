@@ -3,9 +3,7 @@
 
 	import { getContext } from 'svelte';
 
-	let user = $state(getContext('user'));
-
-	console.log(user);
+	let user = $state();
 </script>
 
 {#if user}

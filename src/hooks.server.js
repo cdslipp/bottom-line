@@ -27,15 +27,19 @@ export async function handle({ event, resolve }) {
 
 			if (userID) {
 				const userInfo = await passage.user.get(userID);
+				let instantUser = null;
 				const instantToken = await db.auth.createToken(userInfo.email);
 				console.log('Instant token created dude', instantToken);
 
 				if (userInfo.email) {
-					// const instantUser = await db.auth.getUser({ email: userInfo.email });
+					console.log('user email', userInfo.email);
+					instantUser = await db.auth.getUser({ email: userInfo.email });
 					console.log('instantUser', instantUser);
 				}
 
-				event.locals.user = userInfo;
+				event.locals.user = {};
+				event.locals.user.passage = userInfo;
+				event.locals.user.instant = instantUser;
 				event.locals.instantToken = instantToken;
 			} else {
 				event.locals.user = null;

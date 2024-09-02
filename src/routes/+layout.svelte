@@ -10,34 +10,46 @@
 	/** @type {import('./$types').LayoutData} */
 	let { data } = $props();
 
-	let passageUser = $state(data.user);
-	let instantDBUser = $state(null);
+	let passageUser = $state();
+	let instantUser = $state();
+	let user = $state();
+
+	if (data.user) {
+		passageUser = data.user.passage;
+		instantUser = data.user.instant;
+	}
+
 	const db = getDB();
 
 	setContext('db', db);
 	setContext('passageUser', passageUser);
+	setContext('instantUser', instantUser);
 
-	if (data.instantToken) {
+	if (data.instantToken && browser) {
 		console.log('Client side instant token:', data.instantToken);
 		db.auth.signInWithToken(data.instantToken);
 	}
 
-	if (browser && passageUser) {
+	if (browser && passageUser && instantUser) {
 		db.subscribeQuery({ users: { $: { where: { passage_id: passageUser.id } } } }, (resp) => {
 			if (resp.error) {
 				console.error('Error fetching user data:', resp.error.message);
 				return;
 			}
 			if (resp.data && resp.data.users && resp.data.users.length > 0) {
-				instantDBUser = resp.data.users[0];
-				console.log('passage user', passageUser);
-				console.log('User data:', instantDBUser);
+				user = resp.data.users[0];
+				console.log('User data:', user);
+
+				// Check if the instantID needs to be updated
+				if (user.instantID !== instantUser.id) {
+					updateUserInstantID(user.id, instantUser.id);
+				}
 			} else {
 				// User doesn't exist in InstantDB, create a new one
 				console.log('Creating new user in InstantDB');
-				console.log('Passage user:', passageUser);
 				const newUser = {
 					passage_id: passageUser.id,
+					instantID: instantUser.id,
 					email: passageUser.email,
 					first_name: passageUser.name,
 					last_name: passageUser.name,
@@ -50,15 +62,12 @@
 		});
 	}
 
+	function updateUserInstantID(userId, instantId) {
+		db.transact([tx.users[userId].update({ instantID: instantId })]);
+	}
+
 	function handleLogout() {
-		// Clear Passage auth token
-		document.cookie = 'psg_auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-
-		// Clear InstantDB user
-		instantDBUser = null;
-
-		// Redirect to home page or login page
-		goto('/');
+		// Implement logout logic here
 	}
 </script>
 
@@ -70,12 +79,12 @@
 		<ul>
 			<li><a href="/">Budgets</a></li>
 			<li><a href="/analyze">Upload Receipts</a></li>
-			{#if passageUser && instantDBUser}
+			{#if passageUser}
 				<li><button on:click={handleLogout}>Logout</button></li>
 			{/if}
 		</ul>
 	</nav>
-	{#if passageUser && !instantDBUser}
+	{#if passageUser}
 		<p>Loading user data...</p>
 	{:else if !passageUser}
 		<p>Please log in</p>
