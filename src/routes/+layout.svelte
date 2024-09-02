@@ -5,7 +5,7 @@
 	import { setContext } from 'svelte';
 	import { getDB } from '$lib/auth/instantDB';
 	import { goto } from '$app/navigation';
-	import { tx, id } from '@instantdb/core';
+	import { init, tx, id } from '@instantdb/core';
 
 	/** @type {import('./$types').LayoutData} */
 	let { data } = $props();
@@ -16,6 +16,11 @@
 
 	setContext('db', db);
 	setContext('passageUser', passageUser);
+
+	if (data.instantToken) {
+		console.log('Client side instant token:', data.instantToken);
+		db.auth.signInWithToken(data.instantToken);
+	}
 
 	if (browser && passageUser) {
 		db.subscribeQuery({ users: { $: { where: { passage_id: passageUser.id } } } }, (resp) => {
